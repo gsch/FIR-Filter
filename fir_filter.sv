@@ -20,7 +20,7 @@ module fir_filter #(
     fir_compute #(DATA_WIDTH) fir_stage_inst (
       .clk (clk),
       .x_N (x_M[i-1]),
-      .w_N (w_N[i-1]),
+      .w_N (w_N[TAPS-i-1]),
       .y_M (y_M[i-1]),
       .x_M (x_M[i]),
       .y_N (y_M[i])
