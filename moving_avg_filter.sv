@@ -13,16 +13,34 @@ module moving_avg_filter #(
 );
   
   localparam WIND_WIDTH = $clog2(WIND_DEPTH);
-  logic [WIND_WIDTH-1:0] addr;
+  localparam MAVG_WIDTH = WIND_WIDTH + DATA_WIDTH;
   
+  logic [DATA_WIDTH-1:0] x_N_int;
+  logic [DATA_WIDTH-1:0] x_N_last;
+  logic [MAVG_WIDTH-1:0] y_N_acc;
+  logic [WIND_WIDTH-1:0] addr;
+  logic window_valid;
+  // assert when window get filled after reset
+  always_ff @(posedge clk) begin
+    if (reset) begin
+      window_valid <= 1'b0;
+    end else if (~window_valid && addr == WIND_DEPTH-1) begin
+      window_valid <= 1'b1;
+    end
+  end
+  // address generation to store previous x[N] samples
   always_ff @(posedge clk) begin
     if (reset) begin
       addr <= {WIND_WIDTH{1'b0}};
     end else if (x_N_valid) begin
-      addr <= addr + 1'b1;
+      if (addr == WIND_DEPTH-1) begin
+        addr <= {WIND_WIDTH{1'b0}};
+      end else begin
+        addr <= addr + 1'b1;
+      end
     end
   end
-  
+  // RAM store previous x[N] samples
   moving_avg_sp_bram #(
     .DATA_WIDTH(DATA_WIDTH),
     .ADDR_WIDTH(WIND_WIDTH)
@@ -33,7 +51,13 @@ module moving_avg_filter #(
     .din  (x_N),
     .dout (x_M)
   );
-  
+  // accumulates x[N] samples, ie. SUM_WindowSize{x(n)}
+  always_ff @(posedge clk) begin
+    if (x_N_valid) begin
+      y_N_acc <= y_N_acc + x_N - x_N_int;
+    end
+  end
+  assign x_N_int = window_valid ? x_N_last : {DATA_WIDTH{1'b0}};
 
 endmodule
 // Block RAM buliding blocks are RAMB36K or 2-RAMB18K
