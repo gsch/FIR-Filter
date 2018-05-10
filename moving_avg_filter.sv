@@ -67,6 +67,8 @@ module moving_avg_filter #(
       y_N_valid <= 1'b0;
     end else if (x_N_valid) begin
       y_N_valid <= window_valid;
+    end else begin
+      y_N_valid <= 1'b0;
     end
   end
   // output data generation
