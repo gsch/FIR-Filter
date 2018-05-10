@@ -1,8 +1,9 @@
 // SP-RAM based moving average filter
 // y(n) = 1/WindowSize * SUM_WindowSize{x(n)}; 
+// design supports only 2^n Window Size Moving avg filter
 module moving_avg_filter #(
-  parameter WIND_DEPTH = 16,
-  parameter DATA_WIDTH = 16
+  parameter int WIND_WIDTH = 4,
+  parameter int DATA_WIDTH = 16
 ) (
   input  logic clk,
   input  logic reset,
@@ -12,7 +13,7 @@ module moving_avg_filter #(
   output logic y_N_valid
 );
   
-  localparam WIND_WIDTH = $clog2(WIND_DEPTH);
+  localparam WIND_DEPTH = 2**WIND_WIDTH;
   localparam MAVG_WIDTH = WIND_WIDTH + DATA_WIDTH;
   
   logic [DATA_WIDTH-1:0] x_N_int;
@@ -53,12 +54,27 @@ module moving_avg_filter #(
   );
   // accumulates x[N] samples, ie. SUM_WindowSize{x(n)}
   always_ff @(posedge clk) begin
-    if (x_N_valid) begin
+    if (reset) begin
+      y_N_acc <= {MAVG_WIDTH{1'b0}};
+    end else if (x_N_valid) begin
       y_N_acc <= y_N_acc + x_N - x_N_int;
     end
   end
   assign x_N_int = window_valid ? x_N_last : {DATA_WIDTH{1'b0}};
-
+  // output datavalid generation
+  always_ff @(posedge clk) begin
+    if (reset) begin
+      y_N_valid <= 1'b0;
+    end else if (x_N_valid) begin
+      y_N_valid <= window_valid;
+    end
+  end
+  // output data generation
+  // shifting ACC >> WindowWidth = ACC * 1/WindowSize
+  always_ff @(posedge clk) begin
+    y_N <= y_N_acc[MAVG_WIDTH-1:WIND_WIDTH];
+  end
+  
 endmodule
 // Block RAM buliding blocks are RAMB36K or 2-RAMB18K
 module moving_avg_sp_bram #(
