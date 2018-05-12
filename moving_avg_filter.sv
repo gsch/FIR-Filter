@@ -49,8 +49,8 @@ module moving_avg_filter #(
     .clk  (clk),
     .we   (x_N_valid),
     .addr (addr),
-    .din  (x_N),
-    .dout (x_M)
+    .din  (x_N), // x[n]th input
+    .dout (x_N_last) // registered x[N-1]th output
   );
   // accumulates x[N] samples, ie. SUM_WindowSize{x(n)}
   always_ff @(posedge clk) begin
